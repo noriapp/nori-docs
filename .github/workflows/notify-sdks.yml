@@ -1,0 +1,48 @@
+name: Notify SDKs
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  notify-sdks:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.title, 'Sync OpenAPI spec to')
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: [nori-go, nori-php, nori-laravel, nori-ruby]
+    steps:
+      - name: Extract version from PR title
+        id: version
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          VERSION="${PR_TITLE#Sync OpenAPI spec to }"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create issue in SDK repo
+        env:
+          GH_TOKEN: ${{ secrets.NORI_SYNC_TOKEN }}
+          REPO: ${{ matrix.repo }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          BODY=$(cat <<'EOTEMPLATE'
+          ## API Contract Changed
+
+          The `openapi.yaml` in [noriapp/nori](https://github.com/noriapp/nori) has been updated and docs are live.
+
+          Please review the changes and update the SDK accordingly.
+
+          ### Checklist
+          - [ ] Review endpoint changes
+          - [ ] Update SDK client methods if needed
+          - [ ] Update tests
+          - [ ] Bump SDK version
+          EOTEMPLATE
+          )
+
+          gh issue create \
+            --repo "noriapp/$REPO" \
+            --title "API contract updated to $VERSION" \
+            --body "$BODY"
