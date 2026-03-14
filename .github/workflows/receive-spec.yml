@@ -1,0 +1,49 @@
+name: Update OpenAPI Spec
+
+on:
+  repository_dispatch:
+    types: [spec-updated]
+
+jobs:
+  update-spec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout docs
+        uses: actions/checkout@v4
+
+      - name: Download latest spec from nori
+        env:
+          GH_TOKEN: ${{ secrets.NORI_SYNC_TOKEN }}
+        run: |
+          gh api repos/noriapp/nori/contents/openapi.yaml \
+            -H "Accept: application/vnd.github.raw+json" \
+            > openapi.yaml
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet openapi.yaml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.NORI_SYNC_TOKEN }}
+          SPEC_VERSION: ${{ github.event.client_payload.version }}
+        run: |
+          BRANCH="sync/openapi-${SPEC_VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${BRANCH}"
+          git add openapi.yaml
+          git commit -m "chore: sync openapi.yaml to ${SPEC_VERSION}"
+          git push origin "${BRANCH}"
+
+          gh pr create \
+            --title "Sync OpenAPI spec to ${SPEC_VERSION}" \
+            --body "Automated sync from [noriapp/nori](https://github.com/noriapp/nori)." \
+            --base main \
+            --head "${BRANCH}"
