@@ -11,13 +11,13 @@ jobs:
       - name: Checkout docs
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.NORI_SYNC_TOKEN }}
+          token: ${{ secrets.TOGUL_SYNC_TOKEN }}
 
-      - name: Download latest spec from nori
+      - name: Download latest spec from togul
         env:
-          GH_TOKEN: ${{ secrets.NORI_SYNC_TOKEN }}
+          GH_TOKEN: ${{ secrets.TOGUL_SYNC_TOKEN }}
         run: |
-          gh api repos/noriapp/nori/contents/openapi.yaml \
+          gh api repos/togulapp/togul/contents/openapi.yaml \
             -H "Accept: application/vnd.github.raw+json" \
             > openapi.yaml
 
@@ -33,7 +33,7 @@ jobs:
       - name: Create Pull Request
         if: steps.diff.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.NORI_SYNC_TOKEN }}
+          GH_TOKEN: ${{ secrets.TOGUL_SYNC_TOKEN }}
           SPEC_VERSION: ${{ github.event.client_payload.version }}
         run: |
           BRANCH="sync/openapi-${SPEC_VERSION}"
@@ -46,6 +46,6 @@ jobs:
 
           gh pr create \
             --title "Sync OpenAPI spec to ${SPEC_VERSION}" \
-            --body "Automated sync from [noriapp/nori](https://github.com/noriapp/nori)." \
+            --body "Automated sync from [togulapp/togul](https://github.com/togulapp/togul)." \
             --base main \
             --head "${BRANCH}"

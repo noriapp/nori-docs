@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repo: [nori-go, nori-php, nori-laravel, nori-ruby]
+        repo: [togul-go, togul-php, togul-laravel, togul-ruby]
     steps:
       - name: Extract version from PR title
         id: version
@@ -23,14 +23,14 @@ jobs:
 
       - name: Create issue in SDK repo
         env:
-          GH_TOKEN: ${{ secrets.NORI_SYNC_TOKEN }}
+          GH_TOKEN: ${{ secrets.TOGUL_SYNC_TOKEN }}
           REPO: ${{ matrix.repo }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           BODY=$(cat <<'EOTEMPLATE'
           ## API Contract Changed
 
-          The `openapi.yaml` in [noriapp/nori](https://github.com/noriapp/nori) has been updated and docs are live.
+          The `openapi.yaml` in [togulapp/togul](https://github.com/togulapp/togul) has been updated and docs are live.
 
           Please review the changes and update the SDK accordingly.
 
@@ -43,6 +43,6 @@ jobs:
           )
 
           gh issue create \
-            --repo "noriapp/$REPO" \
+            --repo "togulapp/$REPO" \
             --title "API contract updated to $VERSION" \
             --body "$BODY"
