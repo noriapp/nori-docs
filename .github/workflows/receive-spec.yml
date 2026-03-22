@@ -12,6 +12,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.TOGUL_SYNC_TOKEN }}
+          fetch-depth: 0
 
       - name: Download latest spec from togul
         env:
@@ -39,13 +40,18 @@ jobs:
           BRANCH="sync/openapi-${SPEC_VERSION}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "${BRANCH}"
+          git checkout -B "${BRANCH}"
           git add openapi.yaml
           git commit -m "chore: sync openapi.yaml to ${SPEC_VERSION}"
-          git push origin "${BRANCH}"
+          git fetch origin "${BRANCH}" || true
+          git push --force-with-lease origin "${BRANCH}"
 
-          gh pr create \
-            --title "Sync OpenAPI spec to ${SPEC_VERSION}" \
-            --body "Automated sync from [togulapp/togul](https://github.com/togulapp/togul)." \
-            --base main \
-            --head "${BRANCH}"
+          if [ "$(gh pr list --head "${BRANCH}" --json number --jq 'length')" -gt 0 ]; then
+            echo "Pull request for ${BRANCH} already exists; skipping creation."
+          else
+            gh pr create \
+              --title "Sync OpenAPI spec to ${SPEC_VERSION}" \
+              --body "Automated sync from [togulapp/togul](https://github.com/togulapp/togul)." \
+              --base main \
+              --head "${BRANCH}"
+          fi
